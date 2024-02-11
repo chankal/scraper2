@@ -17,7 +17,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from seleniumwire import webdriver
+#from seleniumwire import webdriver
 
 
 def timenow():
@@ -25,7 +25,7 @@ def timenow():
 
 
 # Example: Use selenium for clicking a button
-def scraper(url, driver):
+def scraper1(url, driver):
     def fetch():
         print(f"fetching outages from {url}")
 
@@ -100,14 +100,11 @@ def scraper(url, driver):
 # Input: url to scrape, chromedriver
 # Output: A dictionary of dataframe, Ex: {"per_county": <pandas dataframe>, "per_zipcode": <pandas dataframe>, ...}
 # Scraper 1 is an example
-def timenow1():
-    return datetime.strftime(datetime.now(), "%m-%d-%Y %H:%M:%S")
-
-def scraper1(url, driver):
-    while True:
-        
+def scraper(url):
+   
+    try:
         response = requests.get(url)
-        
+    
         # Check if the request was successful
         if response.status_code == 200:
             # Parse JSON data
@@ -115,52 +112,58 @@ def scraper1(url, driver):
 
             # DataFrame
             df = pd.DataFrame(outages_data)
+
+            return df
+
             
             # Dataframe to CSV
-            if not df.empty:
-                df.to_csv("info.csv", index=False)
-                print(f"Data saved to info.csv at {timenow()} successfully.")
-            else:
-                print(f"No data to save at {timenow()}.")
+            # if not df.empty:
+            #     df.to_csv("info.csv", index=False)
+            #     print(f"Data saved to info.csv at {timenow()} successfully.")
+            # else:
+            #     print(f"No data to save at {timenow()}.")
 
-            # 15 mins
-            time.sleep(900)
         else:
             print(f"Failed to fetch data from the URL at {timenow()}.") #if no data
-
+    except:
+        print("exception request failed")
 
 
 def handler(event, context):
     s3 = boto3.client("s3")
-    bucket = "tutorialbucketing1"  # TODO: Modify it to your own s3 bucket
+    bucket = "chandinibucketing"  # TODO: Modify it to your own s3 bucket
 
-    options = webdriver.ChromeOptions()
-    options.add_argument("--headless")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--single-process")
-    options.add_argument("--disable-dev-shm-usage")
-    options.binary_location = "/opt/chrome/chrome"
+    # options = webdriver.ChromeOptions()
+    # options.add_argument("--headless")
+    # options.add_argument("--no-sandbox")
+    # options.add_argument("--single-process")
+    # options.add_argument("--disable-dev-shm-usage")
+    # options.binary_location = "/opt/chrome/chrome"
 
-    driver = webdriver.Chrome(
-        executable_path="/opt/chromedriver", chrome_options=options
+    # driver = webdriver.Chrome(
+    #     executable_path="/opt/chromedriver", chrome_options=options
+    # )
+
+    url = "https://www2.ngemc.com/data/outages.json"
+
+    data = scraper(url)  # TODO: Modify it to your own scraper()
+
+    # driver.close()
+    # driver.quit()
+    print("test")
+
+    current_time = timenow()
+        
+    filename = (
+        f"Canochee_{current_time}.csv"  # TODO: Modify it to your filename
     )
-
-    url = "https://outage.canoocheeemc.com:8889/data/outages.json"
-
-    data = scraper1(url, driver)  # TODO: Modify it to your own scraper()
-
-    driver.close()
-    driver.quit()
-
-    for key, df in data.items():
-        current_time = timenow()
-        filename = (
-            f"CanoocheEMC_{key}_{current_time}.csv"  # TODO: Modify it to your filename
-        )
-        csv_buffer = pd.DataFrame(df).to_csv(index=False)
-        s3.put_object(Bucket=bucket, Key=filename, Body=csv_buffer)
+    csv_buffer = pd.DataFrame(data).to_csv(index=False)
+    s3.put_object(Bucket=bucket, Key=filename, Body=csv_buffer)
+    
+    #print(f"filename {filename}, {csv_buffer}")
 
     return {
         "statusCode": 200,
-        "body": "Successfully Scrap the Canooche EMC!",
+        "body": "Successfully Scrap the Canochee EMC!",
     }  # TODO: Modify it to your own message
+
